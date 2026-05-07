@@ -27,6 +27,12 @@ export default function TenantLayout() {
         }}
       />
       <Tabs.Screen
+        name="dashboard"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="payments"
         options={{
           title: 'Payments',

@@ -27,6 +27,12 @@ export default function LandlordLayout() {
         }}
       />
       <Tabs.Screen
+        name="dashboard"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="tenants"
         options={{
           title: 'Tenants',

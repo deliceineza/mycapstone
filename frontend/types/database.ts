@@ -19,6 +19,7 @@ export type Profile = AuthUser;
 
 export interface Tenant {
   id: string;
+  lease_id?: string;
   full_name: string;
   phone: string;
   email: string;
@@ -33,6 +34,7 @@ export interface Tenant {
 
 export interface Payment {
   id: string;
+  lease_id?: string;
   tenant_id: string;
   amount: number;
   status: PaymentStatus;
@@ -53,8 +55,8 @@ export interface Message {
   content: string;
   is_read: boolean;
   created_at: string;
-  sender?: Profile;
-  receiver?: Profile;
+  sender?: any;
+  receiver?: any;
 }
 
 export interface Notification {

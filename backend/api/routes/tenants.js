@@ -84,6 +84,30 @@ router.get('/', authenticate, authorize('landlord'), paginationQuery, asyncHandl
   });
 }));
 
+// Search available tenants (for lease creation)
+router.get('/search/available', authenticate, authorize('landlord'), asyncHandler(async (req, res) => {
+  const { email } = req.query;
+
+  if (!email) {
+    throw new AppError('Email search term required', 400, 'MISSING_SEARCH');
+  }
+
+  const tenants = await User.findAll({
+    where: {
+      role: 'tenant',
+      isActive: true,
+      email: { [Op.iLike]: `%${email}%` }
+    },
+    attributes: ['id', 'email', 'firstName', 'lastName', 'phone'],
+    limit: 10
+  });
+
+  res.json({
+    success: true,
+    data: { tenants }
+  });
+}));
+
 // Get single tenant details
 router.get('/:id', authenticate, authorize('landlord'), ...uuidParam('id'), asyncHandler(async (req, res) => {
   // Verify tenant has a lease with this landlord
@@ -387,30 +411,6 @@ router.delete('/:id', authenticate, authorize('landlord'), ...uuidParam('id'), a
   res.json({
     success: true,
     message: 'Tenant deactivated successfully'
-  });
-}));
-
-// Search available tenants (for lease creation)
-router.get('/search/available', authenticate, authorize('landlord'), asyncHandler(async (req, res) => {
-  const { email } = req.query;
-
-  if (!email) {
-    throw new AppError('Email search term required', 400, 'MISSING_SEARCH');
-  }
-
-  const tenants = await User.findAll({
-    where: {
-      role: 'tenant',
-      isActive: true,
-      email: { [Op.iLike]: `%${email}%` }
-    },
-    attributes: ['id', 'email', 'firstName', 'lastName', 'phone'],
-    limit: 10
-  });
-
-  res.json({
-    success: true,
-    data: { tenants }
   });
 }));
 

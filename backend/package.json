@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "node api/server.js",
     "start": "node api/server.js",
+    "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed.js",
+    "db:import:sqlite": "node scripts/migrate-sqlite-to-postgres.js ./database.db",
     "lint": "eslint ."
   },
   "dependencies": {
@@ -37,7 +40,6 @@
     "@radix-ui/react-toggle": "1.1.10",
     "@radix-ui/react-toggle-group": "1.1.11",
     "@radix-ui/react-tooltip": "1.2.8",
-    "@supabase/supabase-js": "^2.103.2",
     "@vercel/analytics": "1.6.1",
     "autoprefixer": "^10.4.20",
     "bcryptjs": "^3.0.3",
@@ -70,7 +72,6 @@
     "recharts": "2.15.0",
     "sequelize": "^6.37.8",
     "sonner": "^1.7.1",
-    "sqlite3": "^6.0.1",
     "stripe": "^22.0.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
