@@ -26,14 +26,26 @@ export interface Message {
   sender?: ConversationParticipant;
 }
 
+function mapBackendMessage(message: any): Message {
+  return {
+    id: message.id,
+    content: message.content,
+    sender_id: message.senderId,
+    receiver_id: '',
+    is_read: Boolean(message.isRead),
+    created_at: message.createdAt,
+    sender: message.sender
+  };
+}
+
 export async function getConversations(): Promise<Conversation[]> {
   const data = await apiGet<{ conversations: Conversation[] }>('/api/messages/conversations');
   return data.conversations || [];
 }
 
 export async function getConversationMessages(conversationId: string): Promise<Message[]> {
-  const data = await apiGet<{ messages: Message[] }>(`/api/messages/conversations/${conversationId}/messages`);
-  return data.messages || [];
+  const data = await apiGet<{ messages: any[] }>(`/api/messages/conversations/${conversationId}/messages`);
+  return (data.messages || []).map(mapBackendMessage);
 }
 
 export async function createConversation(recipientId: string, propertyId?: string, subject?: string) {
@@ -46,10 +58,10 @@ export async function createConversation(recipientId: string, propertyId?: strin
 }
 
 export async function sendMessage(conversationId: string, content: string) {
-  const data = await apiPost<{ message: Message }>(`/api/messages/conversations/${conversationId}/messages`, {
+  const data = await apiPost<{ message: any }>(`/api/messages/conversations/${conversationId}/messages`, {
     content
   });
-  return data.message;
+  return mapBackendMessage(data.message);
 }
 
 export async function getUnreadMessageCount(): Promise<number> {

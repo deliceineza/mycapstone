@@ -8,6 +8,28 @@ const notificationTypeMap: Record<NotificationType, 'system' | 'payment_received
   reminder: 'payment_reminder'
 };
 
+const frontendTypeMap: Record<string, NotificationType> = {
+  payment_received: 'payment',
+  payment_reminder: 'reminder',
+  payment_overdue: 'warning',
+  lease_expiring: 'warning',
+  maintenance_update: 'info',
+  new_message: 'info',
+  announcement: 'info',
+  system: 'info'
+};
+
+function mapBackendNotification(notification: any): Notification {
+  return {
+    id: notification.id,
+    user_id: notification.userId,
+    message: notification.body || notification.message || notification.title,
+    type: frontendTypeMap[notification.type] || 'info',
+    is_read: Boolean(notification.isRead),
+    created_at: notification.createdAt
+  };
+}
+
 export async function createNotification(userId: string, message: string, type: NotificationType): Promise<void> {
   const backendType = notificationTypeMap[type] || 'system';
   const title = message.length > 80 ? `${message.slice(0, 77)}...` : message;
@@ -21,8 +43,8 @@ export async function createNotification(userId: string, message: string, type: 
 }
 
 export async function getNotifications(): Promise<Notification[]> {
-  const data = await apiGet<{ notifications: Notification[] }>('/api/notifications');
-  return data.notifications || [];
+  const data = await apiGet<{ notifications: any[] }>('/api/notifications');
+  return (data.notifications || []).map(mapBackendNotification);
 }
 
 export async function markNotificationRead(id: string): Promise<void> {
