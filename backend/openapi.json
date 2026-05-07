@@ -1,0 +1,691 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Tenant Payment & Communication API",
+    "description": "REST API for property management, lease handling, payment processing, and tenant communication. Includes user authentication, property management, payment tracking, maintenance requests, messaging, and AI-powered features.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Support",
+      "email": "support@example.com"
+    },
+    "license": {
+      "name": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001",
+      "description": "Development server"
+    },
+    {
+      "url": "https://api.example.com",
+      "description": "Production server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User registration, login, and session management"
+    },
+    {
+      "name": "Properties",
+      "description": "Property and unit management"
+    },
+    {
+      "name": "Leases",
+      "description": "Lease creation and management"
+    },
+    {
+      "name": "Payments",
+      "description": "Payment tracking and processing"
+    },
+    {
+      "name": "Maintenance",
+      "description": "Maintenance request management"
+    },
+    {
+      "name": "Messages",
+      "description": "Direct messaging between landlords and tenants"
+    },
+    {
+      "name": "Notifications",
+      "description": "User notifications and preferences"
+    },
+    {
+      "name": "AI",
+      "description": "AI-powered features"
+    },
+    {
+      "name": "System",
+      "description": "System and health endpoints"
+    }
+  ],
+  "paths": {
+    "/api/health": {
+      "get": {
+        "tags": ["System"],
+        "summary": "Health check",
+        "description": "Check if the API server is running",
+        "responses": {
+          "200": {
+            "description": "Server is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Server is running" },
+                    "timestamp": { "type": "string", "format": "date-time" },
+                    "environment": { "type": "string", "example": "development" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Register new user",
+        "description": "Create a new user account (landlord or tenant)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password", "firstName", "lastName", "role"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "user@example.com" },
+                  "password": { "type": "string", "format": "password", "minLength": 8, "example": "Password123!" },
+                  "firstName": { "type": "string", "example": "John" },
+                  "lastName": { "type": "string", "example": "Doe" },
+                  "phone": { "type": "string", "example": "+1234567890" },
+                  "role": { "type": "string", "enum": ["landlord", "tenant"], "example": "landlord" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Registration successful" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": { "$ref": "#/components/schemas/User" },
+                        "token": { "type": "string", "description": "JWT access token" },
+                        "refreshToken": { "type": "string", "description": "JWT refresh token" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email already registered",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Login user",
+        "description": "Authenticate user and receive JWT tokens",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "landlord@example.com" },
+                  "password": { "type": "string", "format": "password", "example": "Password123!" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Login successful" },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": { "$ref": "#/components/schemas/User" },
+                        "token": { "type": "string", "description": "JWT access token (7 days valid)" },
+                        "refreshToken": { "type": "string", "description": "JWT refresh token (30 days valid)" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": ["Authentication"],
+        "summary": "Get current user",
+        "description": "Get details of the authenticated user",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "User details retrieved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": { "$ref": "#/components/schemas/User" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - token missing or invalid",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/properties": {
+      "get": {
+        "tags": ["Properties"],
+        "summary": "List properties",
+        "description": "Get all properties for the authenticated landlord",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 },
+            "description": "Page number"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "default": 10 },
+            "description": "Items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Properties retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "properties": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/Property" }
+                        },
+                        "pagination": {
+                          "type": "object",
+                          "properties": {
+                            "total": { "type": "integer" },
+                            "page": { "type": "integer" },
+                            "limit": { "type": "integer" },
+                            "pages": { "type": "integer" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Properties"],
+        "summary": "Create property",
+        "description": "Create a new property (landlord only)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "address", "city", "state", "zipCode", "propertyType"],
+                "properties": {
+                  "name": { "type": "string", "example": "Sunset Apartments" },
+                  "address": { "type": "string", "example": "123 Main Street" },
+                  "city": { "type": "string", "example": "Los Angeles" },
+                  "state": { "type": "string", "example": "CA" },
+                  "zipCode": { "type": "string", "example": "90001" },
+                  "propertyType": { "type": "string", "enum": ["apartment", "house", "condo", "townhouse", "commercial"] },
+                  "unitCount": { "type": "integer", "example": 2 },
+                  "description": { "type": "string" },
+                  "amenities": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Property created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": { "type": "string", "example": "Property created successfully" },
+                    "data": { "$ref": "#/components/schemas/Property" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/leases": {
+      "get": {
+        "tags": ["Leases"],
+        "summary": "List leases",
+        "description": "Get leases (landlords see all, tenants see their own)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["active", "terminated", "pending"] }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Leases retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "leases": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/Lease" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Leases"],
+        "summary": "Create lease",
+        "description": "Create a new lease (landlord only)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["unitId", "tenantId", "startDate", "endDate", "monthlyRent"],
+                "properties": {
+                  "unitId": { "type": "string", "format": "uuid" },
+                  "tenantId": { "type": "string", "format": "uuid" },
+                  "startDate": { "type": "string", "format": "date", "example": "2024-01-01" },
+                  "endDate": { "type": "string", "format": "date", "example": "2025-01-01" },
+                  "monthlyRent": { "type": "number", "example": 1500.00 },
+                  "securityDeposit": { "type": "number", "example": 1500.00 },
+                  "paymentDueDay": { "type": "integer", "example": 1 },
+                  "lateFeeAmount": { "type": "number", "example": 50.00 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Lease created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": { "$ref": "#/components/schemas/Lease" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payments": {
+      "get": {
+        "tags": ["Payments"],
+        "summary": "List payments",
+        "description": "Get payments with various filters",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["pending", "completed", "failed", "overdue"] }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payments retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "payments": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/Payment" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/maintenance": {
+      "get": {
+        "tags": ["Maintenance"],
+        "summary": "List maintenance requests",
+        "description": "Get maintenance requests with filters",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["pending", "in-progress", "completed", "cancelled"] }
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["low", "medium", "high"] }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Maintenance requests retrieved successfully"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Maintenance"],
+        "summary": "Create maintenance request",
+        "description": "Create a new maintenance request (tenant only)",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["unitId", "title", "description", "category"],
+                "properties": {
+                  "unitId": { "type": "string", "format": "uuid" },
+                  "title": { "type": "string", "example": "Leaky faucet" },
+                  "description": { "type": "string" },
+                  "category": { "type": "string", "enum": ["plumbing", "electrical", "structural", "appliance", "other"] },
+                  "priority": { "type": "string", "enum": ["low", "medium", "high"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Maintenance request created successfully"
+          }
+        }
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "tags": ["Notifications"],
+        "summary": "List notifications",
+        "description": "Get user notifications",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "read",
+            "in": "query",
+            "schema": { "type": "boolean" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notifications retrieved successfully"
+          }
+        }
+      }
+    },
+    "/api/messages/conversations": {
+      "get": {
+        "tags": ["Messages"],
+        "summary": "List conversations",
+        "description": "Get all conversations for the user",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Conversations retrieved successfully"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Messages"],
+        "summary": "Create conversation",
+        "description": "Start a new conversation",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["participantId"],
+                "properties": {
+                  "participantId": { "type": "string", "format": "uuid" },
+                  "subject": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Conversation created successfully"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter JWT token received from login endpoint"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "email": { "type": "string", "format": "email" },
+          "firstName": { "type": "string" },
+          "lastName": { "type": "string" },
+          "phone": { "type": "string" },
+          "role": { "type": "string", "enum": ["landlord", "tenant"] },
+          "profileImage": { "type": "string", "nullable": true },
+          "isActive": { "type": "boolean" },
+          "notificationPreferences": {
+            "type": "object",
+            "properties": {
+              "email": { "type": "boolean" },
+              "push": { "type": "boolean" },
+              "sms": { "type": "boolean" }
+            }
+          },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Property": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "landlordId": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "address": { "type": "string" },
+          "city": { "type": "string" },
+          "state": { "type": "string" },
+          "zipCode": { "type": "string" },
+          "propertyType": { "type": "string", "enum": ["apartment", "house", "condo", "townhouse", "commercial"] },
+          "unitCount": { "type": "integer" },
+          "description": { "type": "string" },
+          "amenities": { "type": "array", "items": { "type": "string" } },
+          "isActive": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Lease": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "unitId": { "type": "string", "format": "uuid" },
+          "tenantId": { "type": "string", "format": "uuid" },
+          "landlordId": { "type": "string", "format": "uuid" },
+          "startDate": { "type": "string", "format": "date" },
+          "endDate": { "type": "string", "format": "date" },
+          "monthlyRent": { "type": "number" },
+          "securityDeposit": { "type": "number" },
+          "paymentDueDay": { "type": "integer" },
+          "lateFeeAmount": { "type": "number" },
+          "status": { "type": "string", "enum": ["active", "terminated", "pending"] },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Payment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "leaseId": { "type": "string", "format": "uuid" },
+          "tenantId": { "type": "string", "format": "uuid" },
+          "landlordId": { "type": "string", "format": "uuid" },
+          "amount": { "type": "number" },
+          "lateFee": { "type": "number" },
+          "totalAmount": { "type": "number" },
+          "dueDate": { "type": "string", "format": "date" },
+          "paymentDate": { "type": "string", "format": "date", "nullable": true },
+          "paymentType": { "type": "string", "enum": ["rent", "deposit", "utilities"] },
+          "status": { "type": "string", "enum": ["pending", "completed", "failed", "overdue"] },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "message": { "type": "string" },
+          "code": { "type": "string" }
+        }
+      }
+    }
+  }
+}
