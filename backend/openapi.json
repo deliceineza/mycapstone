@@ -148,18 +148,29 @@
       "post": {
         "tags": ["Authentication"],
         "summary": "Login user",
-        "description": "Authenticate user and receive JWT tokens",
+        "description": "Authenticate user with email address or phone number and receive JWT tokens",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["email", "password"],
+                "required": ["password"],
                 "properties": {
+                  "identifier": {
+                    "type": "string",
+                    "description": "Email address or phone number",
+                    "example": "landlord@example.com"
+                  },
                   "email": { "type": "string", "format": "email", "example": "landlord@example.com" },
+                  "phone": { "type": "string", "example": "+1234567890" },
                   "password": { "type": "string", "format": "password", "example": "Password123!" }
-                }
+                },
+                "anyOf": [
+                  { "required": ["identifier"] },
+                  { "required": ["email"] },
+                  { "required": ["phone"] }
+                ]
               }
             }
           }

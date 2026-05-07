@@ -64,6 +64,108 @@ router.get('/', authenticate, paginationQuery, asyncHandler(async (req, res) => 
   });
 }));
 
+// Get payment summary/stats
+router.get('/stats/summary', authenticate, asyncHandler(async (req, res) => {
+  const whereClause = req.user.role === 'landlord'
+    ? { landlordId: req.userId }
+    : { tenantId: req.userId };
+
+  const currentMonth = new Date();
+  const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+  const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+
+  const [totalPending, totalCompleted, monthlyTotal, overduePayments] = await Promise.all([
+    Payment.sum('totalAmount', {
+      where: { ...whereClause, status: 'pending' }
+    }),
+    Payment.sum('totalAmount', {
+      where: { ...whereClause, status: 'completed' }
+    }),
+    Payment.sum('totalAmount', {
+      where: {
+        ...whereClause,
+        status: 'completed',
+        paidAt: { [Op.between]: [startOfMonth, endOfMonth] }
+      }
+    }),
+    Payment.count({
+      where: {
+        ...whereClause,
+        status: 'pending',
+        dueDate: { [Op.lt]: new Date() }
+      }
+    })
+  ]);
+
+  res.json({
+    success: true,
+    data: {
+      totalPending: totalPending || 0,
+      totalCompleted: totalCompleted || 0,
+      monthlyTotal: monthlyTotal || 0,
+      overduePayments
+    }
+  });
+}));
+
+// Generate monthly rent payments (called by cron or manually)
+router.post('/generate-monthly', authenticate, authorize('landlord'), asyncHandler(async (req, res) => {
+  const leases = await Lease.findAll({
+    where: { landlordId: req.userId, status: 'active' }
+  });
+
+  const currentDate = new Date();
+  const payments = [];
+
+  for (const lease of leases) {
+    const dueDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), lease.paymentDueDay);
+    
+    // Check if payment already exists for this month
+    const existingPayment = await Payment.findOne({
+      where: {
+        leaseId: lease.id,
+        paymentType: 'rent',
+        dueDate: {
+          [Op.between]: [
+            new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
+            new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+          ]
+        }
+      }
+    });
+
+    if (!existingPayment) {
+      const payment = await Payment.create({
+        leaseId: lease.id,
+        tenantId: lease.tenantId,
+        landlordId: lease.landlordId,
+        amount: lease.monthlyRent,
+        lateFee: 0,
+        totalAmount: lease.monthlyRent,
+        dueDate,
+        paymentType: 'rent',
+        status: 'pending'
+      });
+      payments.push(payment);
+
+      // Notify tenant
+      await Notification.create({
+        userId: lease.tenantId,
+        type: 'payment_reminder',
+        title: 'Rent Due',
+        body: `Your rent payment of $${lease.monthlyRent} is due on ${dueDate.toLocaleDateString()}`,
+        data: { paymentId: payment.id, leaseId: lease.id }
+      });
+    }
+  }
+
+  res.json({
+    success: true,
+    message: `Generated ${payments.length} payment records`,
+    data: { count: payments.length }
+  });
+}));
+
 // Get payment by ID
 router.get('/:id', authenticate, ...uuidParam('id'), asyncHandler(async (req, res) => {
   const payment = await Payment.findByPk(req.params.id, {
@@ -258,105 +360,33 @@ router.post('/:id/record-manual', authenticate, authorize('landlord'), ...uuidPa
   });
 }));
 
-// Get payment summary/stats
-router.get('/stats/summary', authenticate, asyncHandler(async (req, res) => {
-  const whereClause = req.user.role === 'landlord'
-    ? { landlordId: req.userId }
-    : { tenantId: req.userId };
+// Delete payment
+router.delete('/:id', authenticate, ...uuidParam('id'), asyncHandler(async (req, res) => {
+  const payment = await Payment.findByPk(req.params.id);
 
-  const currentMonth = new Date();
-  const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-  const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-
-  const [totalPending, totalCompleted, monthlyTotal, overduePayments] = await Promise.all([
-    Payment.sum('totalAmount', {
-      where: { ...whereClause, status: 'pending' }
-    }),
-    Payment.sum('totalAmount', {
-      where: { ...whereClause, status: 'completed' }
-    }),
-    Payment.sum('totalAmount', {
-      where: {
-        ...whereClause,
-        status: 'completed',
-        paidAt: { [Op.between]: [startOfMonth, endOfMonth] }
-      }
-    }),
-    Payment.count({
-      where: {
-        ...whereClause,
-        status: 'pending',
-        dueDate: { [Op.lt]: new Date() }
-      }
-    })
-  ]);
-
-  res.json({
-    success: true,
-    data: {
-      totalPending: totalPending || 0,
-      totalCompleted: totalCompleted || 0,
-      monthlyTotal: monthlyTotal || 0,
-      overduePayments
-    }
-  });
-}));
-
-// Generate monthly rent payments (called by cron or manually)
-router.post('/generate-monthly', authenticate, authorize('landlord'), asyncHandler(async (req, res) => {
-  const leases = await Lease.findAll({
-    where: { landlordId: req.userId, status: 'active' }
-  });
-
-  const currentDate = new Date();
-  const payments = [];
-
-  for (const lease of leases) {
-    const dueDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), lease.paymentDueDay);
-    
-    // Check if payment already exists for this month
-    const existingPayment = await Payment.findOne({
-      where: {
-        leaseId: lease.id,
-        paymentType: 'rent',
-        dueDate: {
-          [Op.between]: [
-            new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
-            new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
-          ]
-        }
-      }
-    });
-
-    if (!existingPayment) {
-      const payment = await Payment.create({
-        leaseId: lease.id,
-        tenantId: lease.tenantId,
-        landlordId: lease.landlordId,
-        amount: lease.monthlyRent,
-        lateFee: 0,
-        totalAmount: lease.monthlyRent,
-        dueDate,
-        paymentType: 'rent',
-        status: 'pending'
-      });
-      payments.push(payment);
-
-      // Notify tenant
-      await Notification.create({
-        userId: lease.tenantId,
-        type: 'payment_reminder',
-        title: 'Rent Due',
-        body: `Your rent payment of $${lease.monthlyRent} is due on ${dueDate.toLocaleDateString()}`,
-        data: { paymentId: payment.id, leaseId: lease.id }
-      });
-    }
+  if (!payment) {
+    throw new AppError('Payment not found', 404, 'NOT_FOUND');
   }
 
+  // Check authorization - tenant can delete their own payments, landlord can delete payments for their tenants
+  if (req.user.role === 'tenant' && payment.tenantId !== req.userId) {
+    throw new AppError('Not authorized', 403, 'FORBIDDEN');
+  }
+
+  if (req.user.role === 'landlord' && payment.landlordId !== req.userId) {
+    throw new AppError('Not authorized', 403, 'FORBIDDEN');
+  }
+
+  // Prevent deletion of paid payments
+  if (payment.status === 'completed') {
+    throw new AppError('Cannot delete paid payments', 400, 'CANNOT_DELETE_PAID');
+  }
+
+  await payment.destroy();
+
   res.json({
     success: true,
-    message: `Generated ${payments.length} payment records`,
-    data: { count: payments.length }
+    message: 'Payment deleted successfully'
   });
 }));
 

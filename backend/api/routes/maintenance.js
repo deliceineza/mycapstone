@@ -58,6 +58,30 @@ router.get('/', authenticate, paginationQuery, asyncHandler(async (req, res) => 
   });
 }));
 
+// Get maintenance stats
+router.get('/stats/summary', authenticate, asyncHandler(async (req, res) => {
+  const whereClause = req.user.role === 'landlord'
+    ? { landlordId: req.userId }
+    : { tenantId: req.userId };
+
+  const [pending, inProgress, completed, emergency] = await Promise.all([
+    MaintenanceRequest.count({ where: { ...whereClause, status: 'pending' } }),
+    MaintenanceRequest.count({ where: { ...whereClause, status: 'in_progress' } }),
+    MaintenanceRequest.count({ where: { ...whereClause, status: 'completed' } }),
+    MaintenanceRequest.count({ where: { ...whereClause, priority: 'emergency', status: { [Op.notIn]: ['completed', 'cancelled'] } } })
+  ]);
+
+  res.json({
+    success: true,
+    data: {
+      pending,
+      inProgress,
+      completed,
+      emergency
+    }
+  });
+}));
+
 // Get single maintenance request
 router.get('/:id', authenticate, ...uuidParam('id'), asyncHandler(async (req, res) => {
   const request = await MaintenanceRequest.findByPk(req.params.id, {
@@ -202,30 +226,6 @@ router.post('/:id/cancel', authenticate, authorize('tenant'), ...uuidParam('id')
   res.json({
     success: true,
     message: 'Maintenance request cancelled'
-  });
-}));
-
-// Get maintenance stats
-router.get('/stats/summary', authenticate, asyncHandler(async (req, res) => {
-  const whereClause = req.user.role === 'landlord'
-    ? { landlordId: req.userId }
-    : { tenantId: req.userId };
-
-  const [pending, inProgress, completed, emergency] = await Promise.all([
-    MaintenanceRequest.count({ where: { ...whereClause, status: 'pending' } }),
-    MaintenanceRequest.count({ where: { ...whereClause, status: 'in_progress' } }),
-    MaintenanceRequest.count({ where: { ...whereClause, status: 'completed' } }),
-    MaintenanceRequest.count({ where: { ...whereClause, priority: 'emergency', status: { [Op.notIn]: ['completed', 'cancelled'] } } })
-  ]);
-
-  res.json({
-    success: true,
-    data: {
-      pending,
-      inProgress,
-      completed,
-      emergency
-    }
   });
 }));
 

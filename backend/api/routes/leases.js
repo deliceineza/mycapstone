@@ -64,6 +64,42 @@ router.get('/', authenticate, paginationQuery, asyncHandler(async (req, res) => 
   });
 }));
 
+// Get tenant's current lease info (for tenant dashboard)
+router.get('/tenant/current', authenticate, authorize('tenant'), asyncHandler(async (req, res) => {
+  const lease = await Lease.findOne({
+    where: {
+      tenantId: req.userId,
+      status: 'active'
+    },
+    include: [
+      {
+        model: Unit,
+        as: 'unit',
+        include: [{
+          model: Property,
+          as: 'property'
+        }]
+      },
+      {
+        model: User,
+        as: 'landlord',
+        attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'profileImage']
+      },
+      {
+        model: Payment,
+        as: 'payments',
+        order: [['dueDate', 'DESC']],
+        limit: 6
+      }
+    ]
+  });
+
+  res.json({
+    success: true,
+    data: { lease }
+  });
+}));
+
 // Get single lease
 router.get('/:id', authenticate, ...uuidParam('id'), asyncHandler(async (req, res) => {
   const lease = await Lease.findByPk(req.params.id, {
@@ -243,42 +279,6 @@ router.post('/:id/terminate', authenticate, authorize('landlord'), ...uuidParam(
   res.json({
     success: true,
     message: 'Lease terminated successfully',
-    data: { lease }
-  });
-}));
-
-// Get tenant's current lease info (for tenant dashboard)
-router.get('/tenant/current', authenticate, authorize('tenant'), asyncHandler(async (req, res) => {
-  const lease = await Lease.findOne({
-    where: {
-      tenantId: req.userId,
-      status: 'active'
-    },
-    include: [
-      {
-        model: Unit,
-        as: 'unit',
-        include: [{
-          model: Property,
-          as: 'property'
-        }]
-      },
-      {
-        model: User,
-        as: 'landlord',
-        attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'profileImage']
-      },
-      {
-        model: Payment,
-        as: 'payments',
-        order: [['dueDate', 'DESC']],
-        limit: 6
-      }
-    ]
-  });
-
-  res.json({
-    success: true,
     data: { lease }
   });
 }));

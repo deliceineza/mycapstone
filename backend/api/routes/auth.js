@@ -93,19 +93,20 @@ router.post('/register', registerValidation, asyncHandler(async (req, res) => {
 
 // Login
 router.post('/login', loginValidation, asyncHandler(async (req, res) => {
-  const { identifier, password } = req.body;
+  const { identifier, email, phone, password } = req.body;
+  const loginIdentifier = String(identifier || email || phone).trim();
 
-  console.log(`[Auth] Login attempt for identifier: ${identifier}`);
+  console.log(`[Auth] Login attempt for identifier: ${loginIdentifier}`);
   const startTime = Date.now();
 
   let user = null;
 
-  if (identifier.includes('@')) {
-    user = await User.findOne({ where: { email: identifier } });
+  if (loginIdentifier.includes('@')) {
+    user = await User.findOne({ where: { email: loginIdentifier } });
   }
 
   if (!user) {
-    user = await User.findOne({ where: { phone: identifier } });
+    user = await User.findOne({ where: { phone: loginIdentifier } });
   }
 
   console.log(`[Auth] User lookup took ${Date.now() - startTime}ms`);
@@ -132,7 +133,7 @@ router.post('/login', loginValidation, asyncHandler(async (req, res) => {
   const token = generateToken(user.id);
   const refreshToken = generateRefreshToken(user.id);
 
-  console.log(`[Auth] Login successful for ${identifier}, total time: ${Date.now() - startTime}ms`);
+  console.log(`[Auth] Login successful for ${loginIdentifier}, total time: ${Date.now() - startTime}ms`);
   
   res.json({
     success: true,

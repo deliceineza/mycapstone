@@ -47,9 +47,19 @@ export const registerValidation = [
 
 export const loginValidation = [
   body('identifier')
-    .trim()
-    .notEmpty()
-    .withMessage('Email or phone is required'),
+    .custom((value, { req }) => {
+      const { identifier, email, phone } = req.body;
+      const loginIdentifier = identifier || email || phone;
+
+      if (!loginIdentifier || String(loginIdentifier).trim() === '') {
+        throw new Error('Email or phone is required');
+      }
+
+      return true;
+    }),
+  body(['identifier', 'email', 'phone'])
+    .optional()
+    .trim(),
   body('password')
     .notEmpty()
     .withMessage('Password is required'),
