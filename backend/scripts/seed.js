@@ -5,11 +5,11 @@
  * node scripts/seed.js
  * 
  * Environment variables required:
- * - DATABASE_URL: PostgreSQL connection string
+ * - DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
  */
 
 import dotenv from 'dotenv';
-dotenv.config({ path: new URL('../api/.env', import.meta.url).pathname });
+dotenv.config({ path: new URL('../.env', import.meta.url).pathname });
 import { 
   sequelize, 
   User, 
@@ -27,107 +27,127 @@ const seed = async () => {
     await sequelize.authenticate();
     console.log('Database connection established.');
 
-    // Create sample landlord
-    const landlord = await User.create({
-      email: 'landlord@example.com',
-      password: 'Password123!',
-      firstName: 'John',
-      lastName: 'Smith',
-      phone: '+1234567890',
-      role: 'landlord'
+    const [landlord, landlordCreated] = await User.findOrCreate({
+      where: { email: 'landlord@example.com' },
+      defaults: {
+        password: 'Password123!',
+        firstName: 'John',
+        lastName: 'Smith',
+        phone: '+1234567890',
+        role: 'landlord'
+      }
     });
-    console.log('Created landlord:', landlord.email);
+    console.log(`${landlordCreated ? 'Created' : 'Found existing'} landlord:`, landlord.email);
 
-    // Create sample tenant
-    const tenant = await User.create({
-      email: 'tenant@example.com',
-      password: 'Password123!',
-      firstName: 'Jane',
-      lastName: 'Doe',
-      phone: '+0987654321',
-      role: 'tenant'
+    const [tenant, tenantCreated] = await User.findOrCreate({
+      where: { email: 'tenant@example.com' },
+      defaults: {
+        password: 'Password123!',
+        firstName: 'Jane',
+        lastName: 'Doe',
+        phone: '+0987654321',
+        role: 'tenant'
+      }
     });
-    console.log('Created tenant:', tenant.email);
+    console.log(`${tenantCreated ? 'Created' : 'Found existing'} tenant:`, tenant.email);
 
-    // Create sample property
-    const property = await Property.create({
-      landlordId: landlord.id,
-      name: 'Sunset Apartments',
-      address: '123 Main Street',
-      city: 'Los Angeles',
-      state: 'CA',
-      zipCode: '90001',
-      propertyType: 'apartment',
-      unitCount: 2,
-      description: 'Beautiful apartment complex with modern amenities',
-      amenities: ['parking', 'laundry', 'gym', 'pool']
+    const [property, propertyCreated] = await Property.findOrCreate({
+      where: {
+        landlordId: landlord.id,
+        name: 'Sunset Apartments'
+      },
+      defaults: {
+        address: '123 Main Street',
+        city: 'Los Angeles',
+        state: 'CA',
+        zipCode: '90001',
+        propertyType: 'apartment',
+        unitCount: 2,
+        description: 'Beautiful apartment complex with modern amenities',
+        amenities: ['parking', 'laundry', 'gym', 'pool']
+      }
     });
-    console.log('Created property:', property.name);
+    console.log(`${propertyCreated ? 'Created' : 'Found existing'} property:`, property.name);
 
-    // Create sample units
-    const unit1 = await Unit.create({
-      propertyId: property.id,
-      unitNumber: '101',
-      floor: 1,
-      bedrooms: 2,
-      bathrooms: 1,
-      squareFeet: 850,
-      rentAmount: 1500.00,
-      depositAmount: 1500.00,
-      status: 'occupied',
-      features: ['balcony', 'dishwasher']
+    const [unit1] = await Unit.findOrCreate({
+      where: {
+        propertyId: property.id,
+        unitNumber: '101'
+      },
+      defaults: {
+        floor: 1,
+        bedrooms: 2,
+        bathrooms: 1,
+        squareFeet: 850,
+        rentAmount: 1500.00,
+        depositAmount: 1500.00,
+        status: 'occupied',
+        features: ['balcony', 'dishwasher']
+      }
     });
 
-    const unit2 = await Unit.create({
-      propertyId: property.id,
-      unitNumber: '102',
-      floor: 1,
-      bedrooms: 1,
-      bathrooms: 1,
-      squareFeet: 650,
-      rentAmount: 1200.00,
-      depositAmount: 1200.00,
-      status: 'vacant',
-      features: ['updated kitchen']
+    const [unit2] = await Unit.findOrCreate({
+      where: {
+        propertyId: property.id,
+        unitNumber: '102'
+      },
+      defaults: {
+        floor: 1,
+        bedrooms: 1,
+        bathrooms: 1,
+        squareFeet: 650,
+        rentAmount: 1200.00,
+        depositAmount: 1200.00,
+        status: 'vacant',
+        features: ['updated kitchen']
+      }
     });
-    console.log('Created units:', unit1.unitNumber, unit2.unitNumber);
+    console.log('Ensured units:', unit1.unitNumber, unit2.unitNumber);
 
     // Create sample lease
     const startDate = new Date();
     const endDate = new Date();
     endDate.setFullYear(endDate.getFullYear() + 1);
 
-    const lease = await Lease.create({
-      unitId: unit1.id,
-      tenantId: tenant.id,
-      landlordId: landlord.id,
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
-      monthlyRent: 1500.00,
-      securityDeposit: 1500.00,
-      paymentDueDay: 1,
-      lateFeeAmount: 50.00,
-      lateFeeGracePeriod: 5,
-      status: 'active'
+    const [lease] = await Lease.findOrCreate({
+      where: {
+        unitId: unit1.id,
+        tenantId: tenant.id,
+        landlordId: landlord.id,
+        status: 'active'
+      },
+      defaults: {
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+        monthlyRent: 1500.00,
+        securityDeposit: 1500.00,
+        paymentDueDay: 1,
+        lateFeeAmount: 50.00,
+        lateFeeGracePeriod: 5
+      }
     });
-    console.log('Created lease for unit:', unit1.unitNumber);
+    console.log('Ensured lease for unit:', unit1.unitNumber);
 
     // Create sample payment
     const dueDate = new Date();
     dueDate.setDate(1);
 
-    const payment = await Payment.create({
-      leaseId: lease.id,
-      tenantId: tenant.id,
-      landlordId: landlord.id,
-      amount: 1500.00,
-      lateFee: 0,
-      totalAmount: 1500.00,
-      dueDate: dueDate.toISOString().split('T')[0],
-      paymentType: 'rent',
-      status: 'pending'
+    const [payment] = await Payment.findOrCreate({
+      where: {
+        leaseId: lease.id,
+        dueDate: dueDate.toISOString().split('T')[0],
+        paymentType: 'rent'
+      },
+      defaults: {
+        tenantId: tenant.id,
+        landlordId: landlord.id,
+        amount: 1500.00,
+        lateFee: 0,
+        totalAmount: 1500.00,
+        status: 'pending'
+      }
     });
-    console.log('Created payment:', payment.id);
+    console.log('Ensured payment:', payment.id);
 
     console.log('\n--- Seeding completed successfully! ---');
     console.log('\nTest accounts:');

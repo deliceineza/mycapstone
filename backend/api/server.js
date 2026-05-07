@@ -197,12 +197,10 @@ const startServer = async () => {
     // Test database connection
     await sequelize.authenticate();
     console.log('[DB] Database connection established');
-
-    // Sync database (in production, use migrations)
-    if (process.env.NODE_ENV !== 'production') {
-      await sequelize.sync({ force: process.env.FORCE_DB_SYNC === 'true', alter: process.env.FORCE_DB_SYNC !== 'true' });
-      console.log('[DB] Database synced');
+    if (process.env.FORCE_DB_SYNC === 'true' || process.env.DB_SYNC_ALTER === 'true') {
+      console.warn('[DB] Ignoring unsafe sync environment flags. Startup never runs force/alter sync; use explicit migrations.');
     }
+    console.log('[DB] Startup schema sync disabled. Run `npm run db:migrate` for safe, explicit migrations.');
 
     // Initialize cron jobs
     if (process.env.ENABLE_CRON !== 'false') {

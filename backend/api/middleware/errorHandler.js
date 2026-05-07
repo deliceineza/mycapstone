@@ -35,6 +35,27 @@ export const errorHandler = (err, req, res, next) => {
     code = 'REFERENCE_ERROR';
   }
 
+  // PostgreSQL/Sequelize connection errors
+  if ([
+    'SequelizeConnectionError',
+    'SequelizeConnectionRefusedError',
+    'SequelizeHostNotFoundError',
+    'SequelizeHostNotReachableError',
+    'SequelizeAccessDeniedError',
+    'SequelizeConnectionTimedOutError'
+  ].includes(err.name)) {
+    statusCode = 503;
+    message = 'Database connection unavailable';
+    code = 'DB_CONNECTION_ERROR';
+  }
+
+  // PostgreSQL query errors
+  if (err.name === 'SequelizeDatabaseError') {
+    statusCode = 500;
+    message = 'Database query failed';
+    code = 'DB_QUERY_ERROR';
+  }
+
   // JWT errors
   if (err.name === 'JsonWebTokenError') {
     statusCode = 401;

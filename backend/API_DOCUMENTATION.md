@@ -66,15 +66,17 @@ Register a new user (landlord or tenant)
 ```
 
 #### POST /login
-Authenticate and receive JWT tokens
+Authenticate with an email address or phone number and receive JWT tokens
 
 **Request Body:**
 ```json
 {
-  "email": "landlord@example.com",
+  "identifier": "landlord@example.com",
   "password": "Password123!"
 }
 ```
+
+You may also send `"email"` or `"phone"` instead of `"identifier"`.
 
 **Response (200):**
 ```json
@@ -781,7 +783,7 @@ All errors follow this format:
 ```bash
 curl -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"landlord@example.com","password":"Password123!"}'
+  -d '{"identifier":"landlord@example.com","password":"Password123!"}'
 ```
 
 ### List Properties:

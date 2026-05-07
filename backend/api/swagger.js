@@ -468,21 +468,31 @@ options.definition.paths = {
     post: {
       tags: ['Authentication'],
       summary: 'Login user',
-      description: 'Authenticate user and receive JWT token',
+      description: 'Authenticate user with email address or phone number and receive JWT token',
       requestBody: {
         required: true,
         content: {
           'application/json': {
             schema: {
               type: 'object',
-              required: ['email', 'password'],
+              required: ['password'],
               properties: {
+                identifier: {
+                  type: 'string',
+                  description: 'Email address or phone number'
+                },
                 email: { type: 'string', format: 'email' },
+                phone: { type: 'string' },
                 password: { type: 'string' }
-              }
+              },
+              anyOf: [
+                { required: ['identifier'] },
+                { required: ['email'] },
+                { required: ['phone'] }
+              ]
             },
             example: {
-              email: 'landlord@example.com',
+              identifier: 'landlord@example.com',
               password: 'Password123!'
             }
           }
@@ -521,7 +531,7 @@ options.definition.paths = {
             'application/json': {
               example: {
                 success: false,
-                message: 'Invalid email or password',
+                message: 'Invalid email or phone or password',
                 code: 'INVALID_CREDENTIALS'
               }
             }
