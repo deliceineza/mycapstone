@@ -155,6 +155,11 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 4,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
   balanceCardWrapper: { marginTop: spacing.lg },
   notLinkedCard: {
     alignItems: 'center',

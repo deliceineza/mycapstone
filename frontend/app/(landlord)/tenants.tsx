@@ -102,8 +102,7 @@ export default function TenantsScreen() {
     try {
       if (editingTenant) {
         await updateTenant(editingTenant.id, {
-          firstName: form.firstName.trim(),
-          lastName: form.lastName.trim(),
+          full_name: `${form.firstName.trim()} ${form.lastName.trim()}`,
           phone: form.phone.trim(),
         });
       } else {

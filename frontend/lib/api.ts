@@ -1,6 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 
-const RAW_API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://smooth-chefs-learn.loca.lt';
+const RAW_API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://mycapstone-d0ns.onrender.com';
 const API_BASE_URL = RAW_API_BASE_URL.trim().replace(/\/+$/, '').replace(/\/api$/, '');
 const ACCESS_TOKEN_KEY = 'api_access_token';
 const REFRESH_TOKEN_KEY = 'api_refresh_token';

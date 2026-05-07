@@ -7,6 +7,7 @@ function mapBackendTenant(user: any): Tenant {
 
   return {
     id: user.id,
+    lease_id: lease?.id,
     full_name: `${user.firstName} ${user.lastName}`,
     phone: user.phone ?? '',
     email: user.email ?? '',
@@ -43,6 +44,7 @@ export async function getCurrentTenantInfo(): Promise<Tenant | null> {
 
     return {
       id: user.id,
+      lease_id: lease.id,
       full_name: `${user.firstName} ${user.lastName}`,
       phone: user.phone ?? '',
       email: user.email ?? '',
@@ -89,6 +91,8 @@ export async function updateTenant(id: string, updates: Partial<Tenant>): Promis
     payload.firstName = firstName;
     payload.lastName = rest.join(' ') || 'Tenant';
   }
+  if ((updates as any).firstName !== undefined) payload.firstName = (updates as any).firstName;
+  if ((updates as any).lastName !== undefined) payload.lastName = (updates as any).lastName;
   if (updates.phone !== undefined) payload.phone = updates.phone;
   // Note: email, rent_amount, due_date, unit_number updates should be handled through lease management
 

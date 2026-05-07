@@ -56,8 +56,16 @@ export default function PaymentsScreen() {
     setSaving(true);
     setFormError('');
     try {
-      await createPayment({ leaseId: selectedTenantId, amount: parseFloat(amount), dueDate: date, notes });
       const tenant = tenants.find(t => t.id === selectedTenantId);
+      if (!tenant?.lease_id) {
+        setFormError('Selected tenant does not have an active lease');
+        return;
+      }
+
+      const payment = await createPayment({ leaseId: tenant.lease_id, amount: parseFloat(amount), dueDate: date, notes });
+      if (status === 'paid') {
+        await updatePaymentStatus(payment.id, status);
+      }
       if (tenant) {
         await createNotification(
           user!.id,
